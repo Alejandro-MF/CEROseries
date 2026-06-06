@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CERO Series - Menú Principal</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3B82F6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="tail.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Quicksand', sans-serif; position: relative; }
+        .title-font { font-family: 'Fredoka One', cursive; }
+        .bg-pastel-blue { background-color: #E0F2FE; }
+        .bg-pastel-orange { background-color: #FFEDD5; }
+        .btn-smooth { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .btn-smooth:active { transform: scale(0.95); }
+
+        /* Animated Background Styles */
+        #math-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        .math-symbol {
+            position: absolute;
+            color: rgba(59, 130, 246, 0.18); /* Slightly stronger blue */
+            font-family: 'Fredoka One', cursive;
+            user-select: none;
+            animation: float-around linear infinite;
+        }
+        @keyframes float-around {
+            from { transform: translateY(110vh) rotate(0deg); }
+            to { transform: translateY(-10vh) rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-pastel-blue h-[100dvh] overflow-hidden flex items-center justify-center p-4">
+    <div id="math-bg"></div>
+    <div class="max-w-md w-full text-center space-y-6 flex flex-col justify-between h-full py-8">
+        <header class="space-y-2">
+            <h1 class="title-font text-5xl md:text-6xl text-blue-500 drop-shadow-sm">CERO</h1>
+            <h2 class="title-font text-4xl md:text-5xl text-orange-400">Series</h2>
+        </header>
+
+        <nav class="flex flex-col gap-4">
+            <a href="game.html" class="bg-orange-400 hover:bg-orange-500 text-white title-font text-2xl py-4 rounded-3xl shadow-lg btn-smooth">
+                ¡JUGAR!
+            </a>
+            <a href="tutorial.html" class="bg-white hover:bg-gray-50 text-blue-500 title-font text-xl py-4 rounded-3xl shadow-md border-2 border-blue-100 btn-smooth">
+                Tutorial
+            </a>
+            <a href="records.html" class="bg-white hover:bg-gray-50 text-orange-400 title-font text-xl py-4 rounded-3xl shadow-md border-2 border-orange-100 btn-smooth">
+                Records
+            </a>
+        </nav>
+
+        <footer class="">
+            <p class="text-blue-400 font-bold opacity-60">v1.0 - Local & Responsive</p>
+        </footer>
+    </div>
+
+    <script>
+        // Floating Math Symbols Logic
+        const symbols = ['+', '-', '×', '÷', '=', '√', 'π', '∑', '∞', 'Δ', 'θ', '∫', '%', 'x²', 'y'];
+        const bg = document.getElementById('math-bg');
+
+        function createSymbol() {
+            const symbol = document.createElement('div');
+            symbol.className = 'math-symbol';
+            symbol.innerText = symbols[Math.floor(Math.random() * symbols.length)];
+            
+            // Random position and animation properties
+            const left = Math.random() * 100;
+            const duration = 15 + Math.random() * 20;
+            const size = 30 + Math.random() * 60; // Larger range: 30px to 90px
+            const delay = Math.random() * -20;
+
+            symbol.style.left = left + '%';
+            symbol.style.fontSize = size + 'px';
+            symbol.style.animationDuration = duration + 's';
+            symbol.style.animationDelay = delay + 's';
+
+            bg.appendChild(symbol);
+
+            // Remove symbol after animation finishes
+            setTimeout(() => {
+                symbol.remove();
+                createSymbol();
+            }, duration * 1000);
+        }
+
+        // Initial creation
+        for (let i = 0; i < 20; i++) {
+            setTimeout(createSymbol, i * 300);
+        }
+
+        if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js');
+            });
+        }
+    </script>
+</body>
+</html>

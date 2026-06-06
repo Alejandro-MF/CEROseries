@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CERO Series - Juego</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Quicksand', sans-serif; touch-action: manipulation; position: relative; }
+        .title-font { font-family: 'Fredoka One', cursive; }
+        .bg-pastel-blue { background-color: #E0F2FE; }
+        .bg-pastel-orange { background-color: #FFEDD5; }
+        [v-cloak] { display: none; }
+        .btn-smooth { transition: all 0.2s; }
+        .btn-smooth:active { transform: scale(0.95); }
+
+        /* Animated Background Styles */
+        #math-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        .math-symbol {
+            position: absolute;
+            color: rgba(59, 130, 246, 0.15); /* Stronger color */
+            font-family: 'Fredoka One', cursive;
+            user-select: none;
+            animation: float-around linear infinite;
+        }
+        @keyframes float-around {
+            from { transform: translateY(110vh) rotate(0deg); }
+            to { transform: translateY(-10vh) rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-pastel-blue h-[100dvh] overflow-hidden">
+    <div id="math-bg"></div>
+    <div id="app" v-cloak class="max-w-xl mx-auto h-full flex flex-col p-3 md:p-4">
+        <!-- Header: Stats -->
+        <header class="flex justify-between items-center bg-white rounded-2xl shadow-md p-3 mb-3 shrink-0">
+            <div class="flex items-center space-x-2">
+                <span class="text-xl">❤️</span>
+                <span class="text-lg font-bold text-red-500">{{ lives }}</span>
+            </div>
+            
+            <button @click="endGame(false)" class="bg-red-100 hover:bg-red-200 text-red-600 px-3 py-1 rounded-xl text-[10px] font-bold uppercase transition-all active:scale-95 shadow-sm">
+                Terminar
+            </button>
+
+            <div class="text-center">
+                <p class="text-[10px] text-gray-400 font-bold uppercase">Penalización</p>
+                <div class="flex items-center justify-center space-x-2">
+                    <p class="text-lg title-font text-blue-500">{{ Math.round(score) }}</p>
+                    <!-- Floating Score Penalty Feedback -->
+                    <transition name="fade-up">
+                        <p v-if="showPenaltyFeedback" class="text-red-500 font-bold text-xs absolute translate-x-12">
+                            +{{ Math.round(lastPenaltyAdded) }}
+                        </p>
+                    </transition>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <span class="text-lg font-bold text-orange-400"> {{ hints }}</span>
+                <span class="text-xl">💡</span>
+            </div>
+        </header>
+
+        <!-- Main Game Area -->
+        <main class="flex-grow flex flex-col items-center justify-center space-y-6">
+            <!-- Level Info -->
+            <div class="text-center">
+                <span class="bg-orange-100 text-orange-600 px-4 py-1 rounded-full text-sm font-bold uppercase tracking-widest">
+                    Bloque: {{ currentBlockLabel }}
+                </span>
+                <h2 class="title-font text-2xl text-blue-600 mt-2">Nivel {{ levelInBlock }}/{{ maxLevelsInBlock }}</h2>
+            </div>
+
+            <!-- Sequence Display -->
+            <div class="bg-white rounded-3xl shadow-xl p-8 w-full text-center space-y-6 relative overflow-hidden">
+                <div class="flex flex-wrap justify-center gap-3 text-3xl md:text-4xl title-font text-blue-500">
+                    <div v-for="(num, index) in currentSequence.display" :key="index" 
+                         class="w-12 h-12 md:w-16 md:h-16 flex items-center justify-center bg-blue-50 rounded-2xl border-2 border-blue-100">
+                        <span v-if="num !== null">{{ num }}</span>
+                        <span v-else class="text-orange-400 animate-pulse">?</span>
+                    </div>
+                </div>
+                
+                <!-- Hint System -->
+                <div class="pt-4 h-12 flex items-center justify-center">
+                    <div v-if="hintShown" class="bg-orange-50 px-4 py-2 rounded-2xl border-2 border-orange-100 animate-bounce-in">
+                        <p class="text-orange-600 text-sm font-bold">💡 PISTA: {{ currentSequence.hint }}</p>
+                    </div>
+                    <button v-else @click="useHint" 
+                            class="bg-orange-100 hover:bg-orange-200 text-orange-600 px-4 py-2 rounded-xl text-sm font-bold transition-all active:scale-95">
+                        Usar Pista ({{ hints > 0 ? '1 💡' : '600 pts' }})
+                    </button>
+                </div>
+            </div>
+
+            <!-- Input Display -->
+            <div class="w-full">
+                <div class="bg-white rounded-2xl border-4 border-blue-200 p-4 text-center text-4xl title-font text-orange-500 min-h-[80px] flex items-center justify-center">
+                    {{ userInput || '?' }}
+                </div>
+            </div>
+        </main>
+
+        <!-- God Level Timer -->
+        <div v-if="currentBlock === 'dios'" class="bg-red-100 text-red-600 p-3 rounded-2xl text-center font-bold mb-4 shadow-inner">
+            🔥 TIEMPO DIOS: {{ formatTime(godTimer) }} 🔥
+        </div>
+
+        <!-- Custom Keypad (APK Friendly) -->
+        <div class="grid grid-cols-3 gap-3 mt-2">
+            <button v-for="n in [1,2,3,4,5,6,7,8,9]" @click="appendNumber(n)" class="bg-white py-4 rounded-3xl shadow-sm text-2xl font-bold text-blue-500 active:bg-blue-50 btn-smooth">
+                {{ n }}
+            </button>
+            <button @click="clearInput" class="bg-orange-100 py-4 rounded-3xl shadow-sm text-xl font-bold text-orange-500 active:bg-orange-200 btn-smooth">
+                BORRAR
+            </button>
+            <button @click="appendNumber(0)" class="bg-white py-4 rounded-3xl shadow-sm text-2xl font-bold text-blue-500 active:bg-blue-50 btn-smooth">
+                0
+            </button>
+            <button @click="checkAnswer" class="bg-blue-500 py-4 rounded-3xl shadow-lg text-white font-bold text-xl active:bg-blue-600 btn-smooth">
+                LISTO
+            </button>
+        </div>
+
+        <!-- Modal: Level Complete -->
+        <div v-if="showLevelModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-3xl p-8 w-full max-w-sm text-center space-y-4 animate-bounce-in">
+                <h3 class="title-font text-3xl text-orange-400">¡BIEN HECHO!</h3>
+                <p class="text-gray-600">Nivel completado.</p>
+                <div class="bg-blue-50 p-4 rounded-2xl">
+                    <p class="text-sm text-blue-400 font-bold">PENALIZACIÓN DEL NIVEL</p>
+                    <p class="text-2xl title-font text-blue-600">+ {{ Math.round(lastLevelScore) }}</p>
+                </div>
+                <button @click="nextLevel" class="w-full bg-blue-500 text-white title-font py-4 rounded-2xl">CONTINUAR</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Floating Math Symbols Logic
+        const symbols = ['+', '-', '×', '÷', '=', '√', 'π', '∑', '∞', 'Δ', 'θ', '∫', '%', 'x²', 'y'];
+        const bg = document.getElementById('math-bg');
+
+        function createSymbol() {
+            const symbol = document.createElement('div');
+            symbol.className = 'math-symbol';
+            symbol.innerText = symbols[Math.floor(Math.random() * symbols.length)];
+            
+            const left = Math.random() * 100;
+            const duration = 15 + Math.random() * 20;
+            const size = 30 + Math.random() * 60; // Larger range: 30px to 90px
+            const delay = Math.random() * -20;
+
+            symbol.style.left = left + '%';
+            symbol.style.fontSize = size + 'px';
+            symbol.style.animationDuration = duration + 's';
+            symbol.style.animationDelay = delay + 's';
+
+            bg.appendChild(symbol);
+
+            setTimeout(() => {
+                symbol.remove();
+                createSymbol();
+            }, duration * 1000);
+        }
+
+        for (let i = 0; i < 15; i++) {
+            setTimeout(createSymbol, i * 400);
+        }
+
+        const { createApp, ref, computed, onMounted, onUnmounted } = Vue;
+
+        createApp({
+            setup() {
+                // Game State
+                const lives = ref(5);
+                const score = ref(0);
+                const hints = ref(5);
+                const currentBlock = ref('facil');
+                const levelInBlock = ref(1);
+                const userInput = ref('');
+                const streak = ref(0);
+                const showLevelModal = ref(false);
+                const lastLevelScore = ref(0);
+                const hintShown = ref(false);
+                const showPenaltyFeedback = ref(false);
+                const lastPenaltyAdded = ref(0);
+
+                // Timers
+                const levelStartTime = ref(Date.now());
+                const godTimer = ref(18 * 60);
+                let godInterval = null;
+
+                // Difficulty Weights (Increased Wt for higher time-based impact)
+                const weights = {
+                    facil: { wt: 10, we: 10, count: 5 },
+                    normal: { wt: 15, we: 20, count: 3 },
+                    dificil: { wt: 25, we: 35, count: 2 },
+                    dios: { wt: 50, we: 50, count: 1 }
+                };
+
+                const currentSequence = ref({ display: [], answer: 0, hint: '' });
+
+                const currentBlockLabel = computed(() => {
+                    const labels = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil', dios: 'Nivel Dios' };
+                    return labels[currentBlock.value];
+                });
+
+                const maxLevelsInBlock = computed(() => weights[currentBlock.value].count);
+
+                // Math Utility Functions
+                const isPrime = num => {
+                    for(let i = 2, s = Math.sqrt(num); i <= s; i++) if(num % i === 0) return false;
+                    return num > 1;
+                };
+
+                const getNextCollatz = n => n % 2 === 0 ? n / 2 : 3 * n + 1;
+
+                // Complex Sequence Generator
+                const generateSequence = () => {
+                    hintShown.value = false;
+                    const type = currentBlock.value;
+                    let seq = [];
+                    let ans = 0;
+                    let hintStr = "";
+
+                    const difficulty = {
+                        facil: () => {
+                            const r = Math.random();
+                            if (r < 0.4) { // Aritmetica + Simple Step
+                                let start = Math.floor(Math.random() * 20);
+                                let step = Math.floor(Math.random() * 10) + 2;
+                                seq = [start, start + step, start + step*2, null, start + step*4];
+                                ans = start + step*3;
+                                hintStr = "Suma aritmética básica.";
+                            } else if (r < 0.7) { // Fibonacci inicial
+                                seq = [1, 2, 3, 5, 8, null];
+                                ans = 13;
+                                hintStr = "Suma de los dos anteriores.";
+                            } else { // Exponencial simple
+                                let base = Math.floor(Math.random() * 3) + 2;
+                                seq = [1, base, base**2, null, base**4];
+                                ans = base**3;
+                                hintStr = "Potencias constantes.";
+                            }
+                        },
+                        normal: () => {
+                            const r = Math.random();
+                            if (r < 0.4) { // Primos intercalados
+                                let primes = [2, 3, 5, 7, 11, 13, 17, 19, 23];
+                                seq = [2, 5, 11, 17, null]; // Saltando uno
+                                ans = 23;
+                                hintStr = "Sucesión de números primos (saltando uno).";
+                            } else if (r < 0.7) { // Collatz descendente
+                                seq = [40, 20, 10, 5, 16, null];
+                                ans = 8;
+                                hintStr = "Regla de Collatz: Par / 2, Impar * 3 + 1.";
+                            } else { // Fibonacci + Aritmetica
+                                // 1, 1(+2), 2, 4(+2), 6, 10(+2)... mezcla compleja
+                                seq = [1, 3, 4, 7, 11, null]; // Lucas numbers
+                                ans = 18;
+                                hintStr = "Variante de Fibonacci (Suma de anteriores).";
+                            }
+                        },
+                        dificil: () => {
+                            const r = Math.random();
+                            if (r < 0.5) { // Logaritmos Naturales (aproximados/redondeados)
+                                // e^0, e^1, e^2... rounded
+                                seq = [1, 3, 7, 20, 55, null];
+                                ans = 148;
+                                hintStr = "Crecimiento exponencial basado en 'e' (redondeado).";
+                            } else { // Primos + Fibonacci (Suma de primo n + fib n)
+                                // P: 2, 3, 5, 7, 11
+                                // F: 1, 1, 2, 3, 5
+                                // S: 3, 4, 7, 10, null
+                                seq = [3, 4, 7, 10, 16, null];
+                                ans = 21; // 13 (primo) + 8 (fib)
+                                hintStr = "Suma de la posición en Primos y Fibonacci.";
+                            }
+                        },
+                        dios: () => {
+                            // Súper mezcla: Factorial + Collatz invertido + Log base 2
+                            // (n! + log2(n)) redondeado? No, hagamos algo más purista pero letal
+                            // Sucesión: n! / (n-1) + primo_posicional
+                            // n=1: 1/1 + 2 = 3
+                            // n=2: 2/1 + 3 = 5
+                            // n=3: 6/2 + 5 = 8
+                            // n=4: 24/6 + 7 = 11
+                            // n=5: 120/24 + 11 = 16
+                            // n=6: 720/120 + 13 = 19
+                            seq = [3, 5, 8, 11, 16, 19, null];
+                            ans = 24; // n=7: 5040/720 + 17 = 7 + 17 = 24
+                            hintStr = "Mezcla de razones factoriales y números primos.";
+                        }
+                    };
+
+                    difficulty[type]();
+                    currentSequence.value = { display: seq, answer: ans, hint: hintStr };
+                    levelStartTime.value = Date.now();
+                };
+
+                const useHint = () => {
+                    if (hints.value > 0) {
+                        hints.value--;
+                    } else {
+                        score.value += 600;
+                        triggerPenaltyFeedback(600);
+                    }
+                    hintShown.value = true;
+                };
+
+                const triggerPenaltyFeedback = (amount) => {
+                    lastPenaltyAdded.value = amount;
+                    showPenaltyFeedback.value = true;
+                    setTimeout(() => showPenaltyFeedback.value = false, 2000);
+                };
+
+                const appendNumber = (n) => {
+                    if (userInput.value.length < 10) userInput.value += n;
+                };
+
+                const clearInput = () => userInput.value = '';
+
+                const checkAnswer = () => {
+                    if (parseInt(userInput.value) === currentSequence.value.answer) {
+                        const timeTaken = (Date.now() - levelStartTime.value) / 1000;
+                        const w = weights[currentBlock.value];
+                        const bonus = streak.value >= 1 ? 1.5 : 1;
+                        
+                        const levelPenalty = (timeTaken * w.wt) * bonus;
+                        lastLevelScore.value = levelPenalty;
+                        score.value += levelPenalty;
+                        triggerPenaltyFeedback(levelPenalty);
+                        
+                        streak.value++;
+                        showLevelModal.value = true;
+                    } else {
+                        lives.value--;
+                        const w = weights[currentBlock.value];
+                        score.value += w.we;
+                        triggerPenaltyFeedback(w.we);
+                        streak.value = 0;
+                        userInput.value = '';
+                        
+                        if (lives.value <= 0) endGame();
+                    }
+                };
+
+                const nextLevel = () => {
+                    showLevelModal.value = false;
+                    userInput.value = '';
+                    
+                    if (levelInBlock.value < maxLevelsInBlock.value) {
+                        levelInBlock.value++;
+                    } else {
+                        const order = ['facil', 'normal', 'dificil', 'dios'];
+                        const currentIndex = order.indexOf(currentBlock.value);
+                        if (currentIndex < order.length - 1) {
+                            currentBlock.value = order[currentIndex + 1];
+                            levelInBlock.value = 1;
+                            if (currentBlock.value === 'dios') startGodTimer();
+                        } else {
+                            endGame(true);
+                        }
+                    }
+                    generateSequence();
+                };
+
+                const startGodTimer = () => {
+                    godInterval = setInterval(() => {
+                        godTimer.value--;
+                        if (godTimer.value <= 0) {
+                            clearInterval(godInterval);
+                            endGame();
+                        }
+                    }, 1000);
+                };
+
+                const endGame = (completed = false) => {
+                    localStorage.setItem('lastScore', Math.round(score.value));
+                    window.location.href = 'records.html';
+                };
+
+                const formatTime = (seconds) => {
+                    const m = Math.floor(seconds / 60);
+                    const s = seconds % 60;
+                    return `${m}:${s.toString().padStart(2, '0')}`;
+                };
+
+                onMounted(generateSequence);
+                onUnmounted(() => godInterval && clearInterval(godInterval));
+
+                return {
+                    lives, score, hints, currentBlock, currentBlockLabel, levelInBlock, maxLevelsInBlock,
+                    currentSequence, userInput, showLevelModal, lastLevelScore, godTimer,
+                    hintShown, showPenaltyFeedback, lastPenaltyAdded,
+                    appendNumber, clearInput, checkAnswer, nextLevel, formatTime, useHint, endGame
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

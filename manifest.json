@@ -1,0 +1,17 @@
+{
+  "name": "CERO Series",
+  "short_name": "CERO",
+  "description": "Juego de sucesiones matemáticas con niveles de dificultad.",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#E0F2FE",
+  "theme_color": "#3B82F6",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3771/3771278.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
