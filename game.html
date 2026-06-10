@@ -250,7 +250,7 @@
                                 let b = Math.floor(Math.random() * 4) + a;
                                 seq = [a, b, a+b, a+2*b, 2*a+3*b, null];
                                 ans = 3*a+5*b;
-                                hintStr = "Cada número es la suma de los dos anteriores.";
+                                hintStr = "Cada número es la suma de los dos anteriores (serie de Fibonacci).";
                             } else { // Exponencial simple
                                 let base = Math.floor(Math.random() * 3) + 2;
                                 let start = Math.floor(Math.random() * 2);
@@ -266,7 +266,7 @@
                                 let startIdx = Math.floor(Math.random() * (primes.length - 10));
                                 seq = [primes[startIdx], primes[startIdx+2], primes[startIdx+4], primes[startIdx+6], null];
                                 ans = primes[startIdx+8];
-                                hintStr = "Números primos saltando uno.";
+                                hintStr = "Números primos saltando uno (solo tiene dos divisores: 1 y él mismo).";
                             } else if (r < 0.7) { // Collatz aleatorio
                                 let current = (Math.floor(Math.random() * 30) + 15) * 2;
                                 seq = [current];
