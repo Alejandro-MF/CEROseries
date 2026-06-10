@@ -266,7 +266,7 @@
                                 let startIdx = Math.floor(Math.random() * (primes.length - 10));
                                 seq = [primes[startIdx], primes[startIdx+2], primes[startIdx+4], primes[startIdx+6], null];
                                 ans = primes[startIdx+8];
-                                hintStr = "Números primos saltando uno (solo tiene dos divisores: 1 y él mismo).";
+                                hintStr = "Números primos saltando uno <br> (solo tiene dos divisores: 1 y él mismo).";
                             } else if (r < 0.7) { // Collatz aleatorio
                                 let current = (Math.floor(Math.random() * 30) + 15) * 2;
                                 seq = [current];
