@@ -55,12 +55,12 @@
             </button>
 
             <div class="text-center">
-                <p class="text-[10px] text-gray-400 font-bold uppercase">Penalización</p>
+                <p class="text-[10px] text-gray-400 font-bold uppercase">Puntos</p>
                 <div class="flex items-center justify-center space-x-2">
                     <p class="text-lg title-font text-blue-500">{{ Math.round(score) }}</p>
                     <!-- Floating Score Penalty Feedback -->
                     <transition name="fade-up">
-                        <p v-if="showPenaltyFeedback" class="text-red-500 font-bold text-xs absolute translate-x-12">
+                        <p v-if="showPenaltyFeedback" class="text-green-500 font-bold text-xs absolute translate-x-12">
                             +{{ Math.round(lastPenaltyAdded) }}
                         </p>
                     </transition>
@@ -87,7 +87,7 @@
             <div class="bg-white rounded-3xl shadow-xl p-5 w-full text-center space-y-4 relative overflow-hidden">
                 <div class="flex flex-wrap justify-center gap-2 text-2xl md:text-4xl title-font text-blue-500">
                     <div v-for="(num, index) in currentSequence.display" :key="index" 
-                         class="w-10 h-10 md:w-16 md:h-16 flex items-center justify-center bg-blue-50 rounded-2xl border-2 border-blue-100">
+                        class="w-10 h-10 md:w-16 md:h-16 flex items-center justify-center bg-blue-50 rounded-2xl border-2 border-blue-100">
                         <span v-if="num !== null">{{ num }}</span>
                         <span v-else class="text-orange-400 animate-pulse">?</span>
                     </div>
@@ -140,7 +140,7 @@
                 <h3 class="title-font text-3xl text-orange-400">¡BIEN HECHO!</h3>
                 <p class="text-gray-600">Nivel completado.</p>
                 <div class="bg-blue-50 p-4 rounded-2xl">
-                    <p class="text-sm text-blue-400 font-bold">PENALIZACIÓN DEL NIVEL</p>
+                    <p class="text-sm text-blue-400 font-bold">PUNTOS GANADOS</p>
                     <p class="text-2xl title-font text-blue-600">+ {{ Math.round(lastLevelScore) }}</p>
                 </div>
                 <button @click="nextLevel" class="w-full bg-blue-500 text-white title-font py-4 rounded-2xl">CONTINUAR</button>
@@ -368,21 +368,21 @@
                 const checkAnswer = () => {
                     if (parseInt(userInput.value) === currentSequence.value.answer) {
                         const timeTaken = (Date.now() - levelStartTime.value) / 1000;
-                        const w = weights[currentBlock.value];
-                        const bonus = streak.value >= 1 ? 1.5 : 1;
+                        let pointsGained = 200;
                         
-                        const levelPenalty = (timeTaken * w.wt) * bonus;
-                        lastLevelScore.value = levelPenalty;
-                        score.value += levelPenalty;
-                        triggerPenaltyFeedback(levelPenalty);
+                        if (timeTaken < 60) {
+                            pointsGained += 50;
+                        }
+                        
+                        lastLevelScore.value = pointsGained;
+                        score.value += pointsGained;
+                        triggerPenaltyFeedback(pointsGained);
                         
                         streak.value++;
                         showLevelModal.value = true;
                     } else {
                         lives.value--;
-                        const w = weights[currentBlock.value];
-                        score.value += w.we;
-                        triggerPenaltyFeedback(w.we);
+                        // Penalización por error reducida ya que ahora son puntos positivos
                         streak.value = 0;
                         userInput.value = '';
                         
